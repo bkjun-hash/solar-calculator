@@ -11,17 +11,17 @@
         body { font-family: 'Pretendard', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #1e293b; }
         .wrapper { max-width: 1400px; margin: auto; display: flex; flex-direction: column; gap: 15px; }
         
-        /* PDF 출력 시 여백 조절을 위한 클래스 */
-        #pdf-area { display: flex; flex-direction: column; gap: 15px; background: var(--bg); padding: 10px; }
-
+        /* 탭 스타일 */
         .model-tabs { display: flex; gap: 10px; }
         .tab { flex: 1; padding: 18px; background: white; border: 2px solid #e2e8f0; border-radius: 12px; cursor: pointer; text-align: center; transition: 0.3s; }
         .tab.active { border-color: var(--primary); background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(26,54,93,0.15); }
         .tab h4 { margin: 0 0 4px 0; font-size: 16px; }
 
+        /* 메인 레이아웃 */
         .main-grid { display: grid; grid-template-columns: 340px 1fr; gap: 20px; }
         @media (max-width: 1100px) { .main-grid { grid-template-columns: 1fr; } }
 
+        /* 사이드바 */
         .side-panel { background: white; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.05); height: fit-content; }
         .section-title { font-size: 13px; font-weight: bold; color: var(--primary); margin: 15px 0 8px; border-bottom: 1px solid #f1f5f9; padding-bottom: 5px; }
         .input-group { margin-bottom: 10px; }
@@ -31,30 +31,33 @@
         .btn-upd { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         .btn-pdf { width: 100%; padding: 12px; background: var(--red); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 8px; }
 
+        /* 결과 영역 */
         .summary-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 15px; }
         .s-card { background: white; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0; border-top: 5px solid var(--primary); }
-        .s-card h5 { margin: 0; font-size: 12px; color: #64748b; }
-        .s-card p { margin: 8px 0 0; font-size: 20px; font-weight: 800; color: var(--primary); }
+        .s-card h5 { margin: 0; font-size: 11px; color: #64748b; }
+        .s-card p { margin: 5px 0 0; font-size: 18px; font-weight: 800; color: var(--primary); }
 
-        .chart-box { background: white; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; height: 450px; margin-bottom: 15px; }
+        .chart-box { background: white; padding: 15px; border-radius: 16px; border: 1px solid #e2e8f0; height: 400px; margin-bottom: 15px; }
+        
         .table-box { background: white; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; }
+        .table-scroll { max-height: 500px; overflow-y: auto; } /* 화면에선 스크롤 유지 */
+        
         table { width: 100%; border-collapse: collapse; font-size: 11px; }
-        thead { background: #f8fafc; }
-        th { padding: 10px; text-align: right; border-bottom: 2px solid #e2e8f0; color: #475569; }
+        thead { background: #f8fafc; position: sticky; top: 0; }
+        th { padding: 10px; text-align: right; border-bottom: 2px solid #e2e8f0; color: #475569; white-space: nowrap; }
         td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; text-align: right; }
         th:first-child, td:first-child { text-align: center; }
         .txt-profit { font-weight: bold; color: var(--success); }
 
-        /* PDF 전용 스타일: 출력 시 스크롤바 제거 */
-        @media print {
-            .table-scroll { max-height: none !important; overflow: visible !important; }
-            .btn-upd, .btn-pdf, .model-tabs { display: none !important; }
-        }
+        /* [중요] PDF 저장용 스타일 강제 적용 */
+        .pdf-mode { width: 1100px !important; padding: 20px !important; background: white !important; }
+        .pdf-mode .table-scroll { max-height: none !important; overflow: visible !important; }
+        .pdf-mode .side-panel { box-shadow: none !important; border: 1px solid #eee !important; }
     </style>
 </head>
 <body>
 
-<div class="wrapper" id="capture-target">
+<div class="wrapper" id="main-content">
     <div class="model-tabs">
         <div class="tab active" id="t1" onclick="changeMode(1)"><h4>🏠 전기절감 + 판매</h4></div>
         <div class="tab" id="t2" onclick="changeMode(2)"><h4>💰 전량 판매</h4></div>
@@ -85,17 +88,15 @@
             <button class="btn-pdf" onclick="downloadPDF()">PDF 결과 저장</button>
         </div>
 
-        <div class="content-panel" id="report-area">
+        <div class="content-panel">
             <div class="summary-cards">
                 <div class="s-card"><h5>20년 누적 총매출</h5><p id="sumRev">-</p></div>
                 <div class="s-card" id="exp-card"><h5>20년 누적 총비용</h5><p id="sumExp">-</p></div>
                 <div class="s-card" style="border-top-color: var(--success);"><h5>20년 예상 순이익</h5><p id="sumNet">-</p></div>
             </div>
-            
             <div class="chart-box"><canvas id="mainChart"></canvas></div>
-            
             <div class="table-box">
-                <div class="table-scroll" style="max-height: 450px; overflow-y: auto;">
+                <div class="table-scroll" id="table-scroll-area">
                     <table id="resTable">
                         <thead><tr id="theadRow"></tr></thead>
                         <tbody></tbody>
@@ -113,9 +114,8 @@ let myChart;
 function autoFinance() {
     if (mode === 3) return;
     const cap = parseFloat(document.getElementById('cap').value) || 0;
-    const total = cap * 120;
-    document.getElementById('cash').value = Math.round(total * 0.2);
-    document.getElementById('loan').value = Math.round(total * 0.8);
+    document.getElementById('cash').value = Math.round((cap * 120) * 0.2);
+    document.getElementById('loan').value = Math.round((cap * 120) * 0.8);
 }
 
 function changeMode(m) {
@@ -139,7 +139,7 @@ function renderInputs() {
                          <div class="input-group"><label>판매 단가 (SMP+REC)</label><input type="number" id="sellPrice" value="195"></div>
                          <div class="input-group"><label>자가소비 비율 (%)</label><input type="number" id="selfRatio" value="30"></div>`;
     } else if (mode === 2) {
-        div.innerHTML = `<div class="input-group"><label>가중치 구분 (3가지)</label><select id="weight"><option value="1.5">건물/옥상(1.5)</option><option value="1.2">일반부지(1.2)</option><option value="1.0">임야(1.0)</option></select></div>
+        div.innerHTML = `<div class="input-group"><label>가중치 구분</label><select id="weight"><option value="1.5">건물/옥상(1.5)</option><option value="1.2">일반부지(1.2)</option><option value="1.0">임야(1.0)</option></select></div>
                          <div class="input-group"><label>SMP / REC 단가</label><div style="display:flex; gap:8px;"><input type="number" id="smp" value="120"><input type="number" id="rec" value="75"></div></div>`;
     } else {
         div.innerHTML = `<div class="input-group"><label>연 임대료 (원/kW)</label><input type="number" id="rentPrice" value="40000"></div>`;
@@ -168,10 +168,10 @@ function calc() {
     tbody.innerHTML = '';
 
     if (mode === 3) {
-        thead.innerHTML = `<th>차수</th><th>설치용량(kW)</th><th>단가(원/kW)</th><th>연간 임대수익</th><th>누적수익</th>`;
+        thead.innerHTML = `<th>차수</th><th>설치용량(kW)</th><th>단가(원)</th><th>연간 수익</th><th>누적수익</th>`;
     } else {
         let h = `<th>차수</th><th>발전량(kWh)</th>`;
-        if (mode === 1) h += `<th>전기절감액</th><th>판매수익</th>`;
+        if (mode === 1) h += `<th>절감액</th><th>판매액</th>`;
         h += `<th>매출합계</th><th>대출상환</th><th>관리비</th><th>순수익</th><th>누적순익</th>`;
         thead.innerHTML = h;
     }
@@ -201,24 +201,22 @@ function calc() {
 
         const net = total - repay - v.om;
         tTotalRev += total; tExp += (repay + v.om); tNet += net;
-        
         dataSave.push(Math.round(sRev)); dataSell.push(Math.round(pRev)); 
-        dataCum.push(Math.round(tTotalRev));
-        dataCumSave.push(Math.round(tCumSave)); dataCumSell.push(Math.round(tCumSell));
+        dataCum.push(Math.round(tTotalRev)); dataCumSave.push(Math.round(tCumSave)); dataCumSell.push(Math.round(tCumSell));
 
         if (mode === 3) {
-            tbody.insertAdjacentHTML('beforeend', `<tr><td>${i}년</td><td>${v.cap}</td><td>${(document.getElementById('rentPrice').value || 40000).toLocaleString()}</td><td class="txt-profit">${Math.round(total).toLocaleString()}</td><td>${Math.round(tNet).toLocaleString()}</td></tr>`);
+            tbody.insertAdjacentHTML('beforeend', `<tr><td>${i}</td><td>${v.cap}</td><td>${(document.getElementById('rentPrice').value || 40000).toLocaleString()}</td><td>${Math.round(total).toLocaleString()}</td><td class="txt-profit">${Math.round(tNet).toLocaleString()}</td></tr>`);
         } else {
-            let r = `<tr><td>${i}년</td><td>${Math.round(annualGen).toLocaleString()}</td>`;
+            let r = `<tr><td>${i}</td><td>${Math.round(annualGen).toLocaleString()}</td>`;
             if (mode === 1) r += `<td>${Math.round(sRev).toLocaleString()}</td><td>${Math.round(pRev).toLocaleString()}</td>`;
-            r += `<td><b>${Math.round(total).toLocaleString()}</b></td><td>${Math.round(repay).toLocaleString()}</td><td>${v.om}</td><td class="txt-profit">${Math.round(net).toLocaleString()}</td><td>${Math.round(tNet).toLocaleString()}</td></tr>`;
+            r += `<td>${Math.round(total).toLocaleString()}</td><td>${Math.round(repay).toLocaleString()}</td><td>${v.om}</td><td class="txt-profit">${Math.round(net).toLocaleString()}</td><td>${Math.round(tNet).toLocaleString()}</td></tr>`;
             tbody.insertAdjacentHTML('beforeend', r);
         }
     }
 
-    document.getElementById('sumRev').innerText = Math.round(tTotalRev).toLocaleString() + " 만원";
-    document.getElementById('sumExp').innerText = Math.round(tExp).toLocaleString() + " 만원";
-    document.getElementById('sumNet').innerText = Math.round(tNet).toLocaleString() + " 만원";
+    document.getElementById('sumRev').innerText = Math.round(tTotalRev).toLocaleString() + "만";
+    document.getElementById('sumExp').innerText = Math.round(tExp).toLocaleString() + "만";
+    document.getElementById('sumNet').innerText = Math.round(tNet).toLocaleString() + "만";
 
     drawChart(labels, dataSave, dataSell, dataCum, dataCumSave, dataCumSell);
 }
@@ -226,45 +224,35 @@ function calc() {
 function drawChart(l, ds, dl, dc, dcs, dcl) {
     const ctx = document.getElementById('mainChart').getContext('2d');
     if (myChart) myChart.destroy();
-    
-    let datasets = [{ label: '누적 매출합계', data: dc, type: 'line', borderColor: '#1a365d', backgroundColor: 'rgba(26,54,93,0.1)', borderWidth: 4, fill: true, order: 1 }];
-
+    let datasets = [{ label: '누적 매출합계', data: dc, type: 'line', borderColor: '#1a365d', backgroundColor: 'rgba(26,54,93,0.1)', borderWidth: 3, fill: true, order: 1 }];
     if (mode === 1) {
         datasets.push({ label: '누적 절감액', data: dcs, type: 'line', borderColor: '#ed8936', borderDash: [5, 5], fill: false, order: 2 });
         datasets.push({ label: '누적 판매액', data: dcl, type: 'line', borderColor: '#3182ce', borderDash: [5, 5], fill: false, order: 2 });
         datasets.push({ label: '연간 절감액', data: ds, type: 'bar', backgroundColor: 'rgba(237, 137, 54, 0.4)', stack: 'rev', order: 3 });
         datasets.push({ label: '연간 판매액', data: dl, type: 'bar', backgroundColor: 'rgba(49, 130, 206, 0.4)', stack: 'rev', order: 3 });
     } else {
-        datasets.push({ label: '연간 매출(만원)', data: dl, type: 'bar', backgroundColor: '#38a169', order: 2 });
+        datasets.push({ label: '연간 수익(만원)', data: dl, type: 'bar', backgroundColor: '#38a169', order: 2 });
     }
-
-    myChart = new Chart(ctx, {
-        data: { labels: l, datasets: datasets },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true }, x: { stacked: true } },
-            plugins: { tooltip: { mode: 'index', intersect: false } }
-        }
-    });
+    myChart = new Chart(ctx, { data: { labels: l, datasets: datasets }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true }, x: { stacked: true } } } });
 }
 
 function downloadPDF() {
-    const element = document.getElementById('capture-target');
+    const element = document.getElementById('main-content');
+    const originalStyle = element.style.cssText;
+    
+    // PDF용 임시 스타일 강제 적용
+    element.classList.add('pdf-mode');
+    
     const opt = {
-        margin: 10,
-        filename: '태양광_수익_정밀시뮬레이션.pdf',
+        margin: [10, 10],
+        filename: '태양광_수익분석_리포트.pdf',
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        jsPDF: { unit: 'mm', format: 'a3', orientation: 'landscape' } // 가로형 A3로 넉넉하게 배치
     };
 
-    // 테이블 스크롤 제거 후 캡처, 완료 후 복구
-    const tableScroll = document.querySelector('.table-scroll');
-    const originalMaxHeight = tableScroll.style.maxHeight;
-    tableScroll.style.maxHeight = 'none';
-
     html2pdf().set(opt).from(element).save().then(() => {
-        tableScroll.style.maxHeight = originalMaxHeight;
+        element.classList.remove('pdf-mode'); // 출력 후 원래대로 복구
     });
 }
 

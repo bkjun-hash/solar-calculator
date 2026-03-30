@@ -11,17 +11,14 @@
         body { font-family: 'Pretendard', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #1e293b; }
         .wrapper { max-width: 1400px; margin: auto; display: flex; flex-direction: column; gap: 15px; }
         
-        /* 탭 스타일 */
         .model-tabs { display: flex; gap: 10px; }
         .tab { flex: 1; padding: 18px; background: white; border: 2px solid #e2e8f0; border-radius: 12px; cursor: pointer; text-align: center; transition: 0.3s; }
         .tab.active { border-color: var(--primary); background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(26,54,93,0.15); }
         .tab h4 { margin: 0 0 4px 0; font-size: 16px; }
 
-        /* 메인 레이아웃 */
         .main-grid { display: grid; grid-template-columns: 340px 1fr; gap: 20px; }
         @media (max-width: 1100px) { .main-grid { grid-template-columns: 1fr; } }
 
-        /* 사이드바 */
         .side-panel { background: white; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.05); height: fit-content; }
         .section-title { font-size: 13px; font-weight: bold; color: var(--primary); margin: 15px 0 8px; border-bottom: 1px solid #f1f5f9; padding-bottom: 5px; }
         .input-group { margin-bottom: 10px; }
@@ -31,28 +28,25 @@
         .btn-upd { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         .btn-pdf { width: 100%; padding: 12px; background: var(--red); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 8px; }
 
-        /* 결과 영역 */
         .summary-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 15px; }
         .s-card { background: white; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0; border-top: 5px solid var(--primary); }
         .s-card h5 { margin: 0; font-size: 11px; color: #64748b; }
         .s-card p { margin: 5px 0 0; font-size: 18px; font-weight: 800; color: var(--primary); }
 
         .chart-box { background: white; padding: 15px; border-radius: 16px; border: 1px solid #e2e8f0; height: 400px; margin-bottom: 15px; }
-        
         .table-box { background: white; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; }
-        .table-scroll { max-height: 500px; overflow-y: auto; } /* 화면에선 스크롤 유지 */
+        .table-scroll { max-height: 500px; overflow-y: auto; }
         
         table { width: 100%; border-collapse: collapse; font-size: 11px; }
         thead { background: #f8fafc; position: sticky; top: 0; }
-        th { padding: 10px; text-align: right; border-bottom: 2px solid #e2e8f0; color: #475569; white-space: nowrap; }
+        th { padding: 10px; text-align: right; border-bottom: 2px solid #e2e8f0; color: #475569; }
         td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; text-align: right; }
         th:first-child, td:first-child { text-align: center; }
         .txt-profit { font-weight: bold; color: var(--success); }
 
-        /* [중요] PDF 저장용 스타일 강제 적용 */
+        /* PDF 저장용 스타일 */
         .pdf-mode { width: 1100px !important; padding: 20px !important; background: white !important; }
         .pdf-mode .table-scroll { max-height: none !important; overflow: visible !important; }
-        .pdf-mode .side-panel { box-shadow: none !important; border: 1px solid #eee !important; }
     </style>
 </head>
 <body>
@@ -96,7 +90,7 @@
             </div>
             <div class="chart-box"><canvas id="mainChart"></canvas></div>
             <div class="table-box">
-                <div class="table-scroll" id="table-scroll-area">
+                <div class="table-scroll">
                     <table id="resTable">
                         <thead><tr id="theadRow"></tr></thead>
                         <tbody></tbody>
@@ -139,8 +133,15 @@ function renderInputs() {
                          <div class="input-group"><label>판매 단가 (SMP+REC)</label><input type="number" id="sellPrice" value="195"></div>
                          <div class="input-group"><label>자가소비 비율 (%)</label><input type="number" id="selfRatio" value="30"></div>`;
     } else if (mode === 2) {
-        div.innerHTML = `<div class="input-group"><label>가중치 구분</label><select id="weight"><option value="1.5">건물/옥상(1.5)</option><option value="1.2">일반부지(1.2)</option><option value="1.0">임야(1.0)</option></select></div>
-                         <div class="input-group"><label>SMP / REC 단가</label><div style="display:flex; gap:8px;"><input type="number" id="smp" value="120"><input type="number" id="rec" value="75"></div></div>`;
+        // [복구] 가중치 3가지 구분 선택창
+        div.innerHTML = `<div class="input-group"><label>가중치 구분 (3가지)</label>
+                            <select id="weight">
+                                <option value="1.5">건물/옥상(1.5)</option>
+                                <option value="1.2">일반부지(1.2)</option>
+                                <option value="1.0">임야(1.0)</option>
+                            </select></div>
+                         <div class="input-group"><label>SMP / REC 단가</label>
+                            <div style="display:flex; gap:8px;"><input type="number" id="smp" value="120"><input type="number" id="rec" value="75"></div></div>`;
     } else {
         div.innerHTML = `<div class="input-group"><label>연 임대료 (원/kW)</label><input type="number" id="rentPrice" value="40000"></div>`;
     }
@@ -238,24 +239,18 @@ function drawChart(l, ds, dl, dc, dcs, dcl) {
 
 function downloadPDF() {
     const element = document.getElementById('main-content');
-    const originalStyle = element.style.cssText;
-    
-    // PDF용 임시 스타일 강제 적용
     element.classList.add('pdf-mode');
-    
     const opt = {
         margin: [10, 10],
         filename: '태양광_수익분석_리포트.pdf',
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-        jsPDF: { unit: 'mm', format: 'a3', orientation: 'landscape' } // 가로형 A3로 넉넉하게 배치
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a3', orientation: 'landscape' }
     };
-
     html2pdf().set(opt).from(element).save().then(() => {
-        element.classList.remove('pdf-mode'); // 출력 후 원래대로 복구
+        element.classList.remove('pdf-mode');
     });
 }
-
 window.onload = () => { renderInputs(); calc(); };
 </script>
 </body>

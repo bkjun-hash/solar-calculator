@@ -112,14 +112,12 @@ function changeMode(m) {
     mode = m;
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.getElementById('t'+m).classList.add('active');
-    
     const isRental = (mode === 3);
     document.getElementById('finance-ui').style.display = isRental ? 'none' : 'block';
     document.getElementById('om-ui').style.display = isRental ? 'none' : 'block';
     document.getElementById('gen-ui').style.display = isRental ? 'none' : 'block';
     document.getElementById('deg-ui').style.display = isRental ? 'none' : 'block';
     document.getElementById('exp-card').style.visibility = isRental ? 'hidden' : 'visible';
-    
     renderInputs();
     calc();
 }
@@ -158,8 +156,8 @@ function calc() {
     const monRepay = (v.loan > 0 && v.rate > 0) ? (v.loan * v.rate * Math.pow(1 + v.rate, v.period)) / (Math.pow(1 + v.rate, v.period) - 1) : 0;
     const yearRepay = (monRepay * 12) / 10000;
 
-    let labels = [], dataSave = [], dataSell = [], dataNet = [], dataCum = [], dataCumSave = [], dataCumSell = [];
-    let tRev = 0, tExp = 0, tNet = 0, tCumSave = 0, tCumSell = 0;
+    let labels = [], dataSave = [], dataSell = [], dataCum = [], dataCumSave = [], dataCumSell = [];
+    let tTotalRev = 0, tExp = 0, tNet = 0, tCumSave = 0, tCumSell = 0;
     
     const thead = document.getElementById('theadRow');
     const tbody = document.querySelector('#resTable tbody');
@@ -170,7 +168,7 @@ function calc() {
     } else {
         let h = `<th>차수</th><th>발전량(kWh)</th>`;
         if (mode === 1) h += `<th>전기절감액</th><th>판매수익</th>`;
-        h += `<th>매출합계</th><th>대출상환</th><th>관리비</th><th>순수익</th><th>누적</th>`;
+        h += `<th>매출합계</th><th>대출상환</th><th>관리비</th><th>순수익</th><th>누적순익</th>`;
         thead.innerHTML = h;
     }
 
@@ -192,17 +190,16 @@ function calc() {
             pRev = total;
             repay = (i <= (v.period / 12)) ? yearRepay : 0;
         } else {
-            // 지붕 임대: 비용 0, 매출액 = 순수익 고정
             total = (v.cap * (parseFloat(document.getElementById('rentPrice').value) || 40000)) / 10000;
             pRev = total;
             repay = 0;
         }
 
         const net = total - repay - v.om;
-        tRev += total; tExp += (repay + v.om); tNet += net;
+        tTotalRev += total; tExp += (repay + v.om); tNet += net;
         
         dataSave.push(Math.round(sRev)); dataSell.push(Math.round(pRev)); 
-        dataNet.push(Math.round(net)); dataCum.push(Math.round(tNet));
+        dataCum.push(Math.round(tTotalRev)); // 누적매출 합계 (Save + Sell)
         dataCumSave.push(Math.round(tCumSave)); dataCumSell.push(Math.round(tCumSell));
 
         if (mode === 3) {
@@ -215,30 +212,29 @@ function calc() {
         }
     }
 
-    document.getElementById('sumRev').innerText = Math.round(tRev).toLocaleString() + " 만원";
+    document.getElementById('sumRev').innerText = Math.round(tTotalRev).toLocaleString() + " 만원";
     document.getElementById('sumExp').innerText = Math.round(tExp).toLocaleString() + " 만원";
     document.getElementById('sumNet').innerText = Math.round(tNet).toLocaleString() + " 만원";
 
-    drawChart(labels, dataSave, dataSell, dataNet, dataCum, dataCumSave, dataCumSell);
+    drawChart(labels, dataSave, dataSell, dataCum, dataCumSave, dataCumSell);
 }
 
-function drawChart(l, ds, dl, dn, dc, dcs, dcl) {
+function drawChart(l, ds, dl, dc, dcs, dcl) {
     const ctx = document.getElementById('mainChart').getContext('2d');
     if (myChart) myChart.destroy();
     
     let datasets = [
-        { label: '전체 누적수익', data: dc, type: 'line', borderColor: '#1a365d', backgroundColor: 'rgba(26,54,93,0.1)', borderWidth: 3, fill: true, order: 1 }
+        { label: '누적 매출합계', data: dc, type: 'line', borderColor: '#1a365d', backgroundColor: 'rgba(26,54,93,0.1)', borderWidth: 4, fill: true, order: 1 }
     ];
 
     if (mode === 1) {
+        // 수정된 수식: 누적 절감액 + 누적 판매액 = 누적 매출합계
         datasets.push({ label: '누적 절감액', data: dcs, type: 'line', borderColor: '#ed8936', borderDash: [5, 5], fill: false, order: 2 });
         datasets.push({ label: '누적 판매액', data: dcl, type: 'line', borderColor: '#3182ce', borderDash: [5, 5], fill: false, order: 2 });
-        datasets.push({ label: '연간 절감액', data: ds, type: 'bar', backgroundColor: 'rgba(237, 137, 54, 0.6)', stack: 'rev', order: 3 });
-        datasets.push({ label: '연간 판매액', data: dl, type: 'bar', backgroundColor: 'rgba(49, 130, 206, 0.6)', stack: 'rev', order: 3 });
-    } else if (mode === 2) {
-        datasets.push({ label: '연간 순수익', data: dn, type: 'bar', backgroundColor: '#38a169', order: 2 });
+        datasets.push({ label: '연간 절감액', data: ds, type: 'bar', backgroundColor: 'rgba(237, 137, 54, 0.4)', stack: 'rev', order: 3 });
+        datasets.push({ label: '연간 판매액', data: dl, type: 'bar', backgroundColor: 'rgba(49, 130, 206, 0.4)', stack: 'rev', order: 3 });
     } else {
-        datasets.push({ label: '연간 임대수익', data: dn, type: 'bar', backgroundColor: '#38a169', order: 2 });
+        datasets.push({ label: '연간 매출(만원)', data: dl, type: 'bar', backgroundColor: '#38a169', order: 2 });
     }
 
     myChart = new Chart(ctx, {
@@ -252,7 +248,7 @@ function drawChart(l, ds, dl, dn, dc, dcs, dcl) {
 }
 
 function downloadPDF() {
-    html2pdf().set({ margin: 5, filename: '태양광_수익분석.pdf', html2canvas: { scale: 2 }, jsPDF: { format: 'a4', orientation: 'landscape' } }).from(document.body).save();
+    html2pdf().set({ margin: 5, filename: '태양광_수익보고서.pdf', html2canvas: { scale: 2 }, jsPDF: { format: 'a4', orientation: 'landscape' } }).from(document.body).save();
 }
 
 window.onload = () => { renderInputs(); calc(); };

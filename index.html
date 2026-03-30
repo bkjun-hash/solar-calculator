@@ -171,7 +171,7 @@ function calc() {
     tbody.innerHTML = '';
 
     if (mode === 3) {
-        thead.innerHTML = `<th>차수</th><th>설치용량(kW)</th><th>단가(원/kW)</th><th>연간 임대수익</th><th>누적수익</th>`;
+        thead.innerHTML = `<th>차수</th><th>설치용량(kW)</th><th>단가(원/kW)</th><th>연간 임대수익(만원)</th><th>누적수익(만원)</th>`;
     } else {
         let h = `<th>차수</th><th>발전량(kWh)</th>`;
         if (mode === 1) h += `<th>전기절감액</th><th>판매수익</th>`;

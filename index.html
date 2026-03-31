@@ -44,7 +44,7 @@
         th:first-child, td:first-child { text-align: center; }
         .txt-profit { font-weight: bold; color: var(--success); }
 
-        /* PDF 저장용 스타일 */
+        /* PDF 전용 */
         .pdf-mode { width: 1100px !important; padding: 20px !important; background: white !important; }
         .pdf-mode .table-scroll { max-height: none !important; overflow: visible !important; }
     </style>
@@ -128,19 +128,23 @@ function changeMode(m) {
 
 function renderInputs() {
     const div = document.getElementById('dynamic-inputs');
-    if (mode === 1) {
-        div.innerHTML = `<div class="input-group"><label>절감 단가 (원/kWh)</label><input type="number" id="savePrice" value="200"></div>
-                         <div class="input-group"><label>판매 단가 (SMP+REC)</label><input type="number" id="sellPrice" value="195"></div>
-                         <div class="input-group"><label>자가소비 비율 (%)</label><input type="number" id="selfRatio" value="30"></div>`;
-    } else if (mode === 2) {
-        // [복구] 가중치 3가지 구분 선택창
-        div.innerHTML = `<div class="input-group"><label>가중치 구분 (3가지)</label>
+    // 모든 모드(임대 제외)에 가중치 공통 적용
+    const weightHtml = `<div class="input-group"><label>가중치 구분 (3가지)</label>
                             <select id="weight">
                                 <option value="1.5">건물/옥상(1.5)</option>
                                 <option value="1.2">일반부지(1.2)</option>
                                 <option value="1.0">임야(1.0)</option>
-                            </select></div>
+                            </select></div>`;
+
+    if (mode === 1) {
+        div.innerHTML = weightHtml + 
+                        `<div class="input-group"><label>절감 단가 (원/kWh)</label><input type="number" id="savePrice" value="200"></div>
                          <div class="input-group"><label>SMP / REC 단가</label>
+                            <div style="display:flex; gap:8px;"><input type="number" id="smp" value="120"><input type="number" id="rec" value="75"></div></div>
+                         <div class="input-group"><label>자가소비 비율 (%)</label><input type="number" id="selfRatio" value="30"></div>`;
+    } else if (mode === 2) {
+        div.innerHTML = weightHtml + 
+                        `<div class="input-group"><label>SMP / REC 단가</label>
                             <div style="display:flex; gap:8px;"><input type="number" id="smp" value="120"><input type="number" id="rec" value="75"></div></div>`;
     } else {
         div.innerHTML = `<div class="input-group"><label>연 임대료 (원/kW)</label><input type="number" id="rentPrice" value="40000"></div>`;
@@ -182,18 +186,22 @@ function calc() {
         let annualGen = v.cap * v.gen * 365 * Math.pow(1 - v.deg, i - 1);
         let sRev = 0, pRev = 0, total = 0, repay = 0;
 
-        if (mode === 1) {
-            const ratio = (parseFloat(document.getElementById('selfRatio').value) || 0) / 100;
-            sRev = (annualGen * ratio * parseFloat(document.getElementById('savePrice').value)) / 10000;
-            pRev = (annualGen * (1 - ratio) * parseFloat(document.getElementById('sellPrice').value)) / 10000;
+        if (mode === 1 || mode === 2) {
+            const w = parseFloat(document.getElementById('weight').value);
+            const smp = parseFloat(document.getElementById('smp').value);
+            const rec = parseFloat(document.getElementById('rec').value);
+            const sellUnitPrice = smp + (rec * w);
+
+            if (mode === 1) {
+                const ratio = (parseFloat(document.getElementById('selfRatio').value) || 0) / 100;
+                sRev = (annualGen * ratio * parseFloat(document.getElementById('savePrice').value)) / 10000;
+                pRev = (annualGen * (1 - ratio) * sellUnitPrice) / 10000;
+            } else {
+                pRev = (annualGen * sellUnitPrice) / 10000;
+            }
             total = sRev + pRev;
             repay = (i <= (v.period / 12)) ? yearRepay : 0;
             tCumSave += sRev; tCumSell += pRev;
-        } else if (mode === 2) {
-            const w = parseFloat(document.getElementById('weight').value);
-            total = (annualGen * (parseFloat(document.getElementById('smp').value) + (parseFloat(document.getElementById('rec').value) * w))) / 10000;
-            pRev = total;
-            repay = (i <= (v.period / 12)) ? yearRepay : 0;
         } else {
             total = (v.cap * (parseFloat(document.getElementById('rentPrice').value) || 40000)) / 10000;
             pRev = total;

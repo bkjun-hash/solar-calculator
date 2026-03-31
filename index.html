@@ -2,260 +2,87 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>태양광 수익 모델 정밀 시뮬레이터</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --primary: #1a365d; --accent: #ed8936; --success: #38a169; --bg: #f1f5f9; --red: #e53e3e; }
-        body { font-family: 'Pretendard', sans-serif; background: var(--bg); margin: 0; padding: 10px; color: #1e293b; -webkit-text-size-adjust: none; }
-        
-        /* 전체 컨테이너 모바일 대응 */
-        .wrapper { max-width: 1200px; margin: auto; display: flex; flex-direction: column; gap: 10px; }
-        
-        /* 탭 메뉴: 모바일에서 가로로 꽉 차게 */
-        .model-tabs { display: flex; gap: 5px; margin-bottom: 5px; }
-        .tab { flex: 1; padding: 12px 5px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; text-align: center; font-size: 13px; font-weight: bold; }
-        .tab.active { background: var(--primary); color: white; border-color: var(--primary); }
-
-        /* 메인 레이아웃: 모바일에서는 세로로(Stack) */
-        .main-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
-        @media (min-width: 1024px) { .main-grid { grid-template-columns: 320px 1fr; } }
-
-        /* 입력 패널: 터치하기 쉽게 간격 조정 */
-        .side-panel { background: white; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; }
-        .section-title { font-size: 13px; font-weight: bold; color: var(--primary); margin: 15px 0 8px; border-left: 4px solid var(--primary); padding-left: 8px; }
-        .input-group { margin-bottom: 12px; }
-        label { display: block; font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 4px; }
-        input, select { width: 100%; padding: 12px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 15px; box-sizing: border-box; appearance: none; }
-        
-        .btn-upd { width: 100%; padding: 16px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        :root { --primary: #1a365d; --accent: #ed8936; --success: #38a169; --bg: #f1f5f9; --red: #e53e3e; --blue: #3182ce; }
+        body { font-family: 'Pretendard', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #1e293b; }
+        .wrapper { max-width: 1400px; margin: auto; display: flex; flex-direction: column; gap: 15px; }
+        .model-tabs { display: flex; gap: 10px; }
+        .tab { flex: 1; padding: 18px; background: white; border: 2px solid #e2e8f0; border-radius: 12px; cursor: pointer; text-align: center; transition: 0.3s; }
+        .tab.active { border-color: var(--primary); background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(26,54,93,0.15); }
+        .main-grid { display: grid; grid-template-columns: 340px 1fr; gap: 20px; }
+        .side-panel { background: white; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.05); height: fit-content; }
+        .section-title { font-size: 13px; font-weight: bold; color: var(--primary); margin: 15px 0 8px; border-bottom: 1px solid #f1f5f9; padding-bottom: 5px; }
+        .input-group { margin-bottom: 10px; }
+        label { display: block; font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 3px; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+        .btn-upd { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         .btn-pdf { width: 100%; padding: 12px; background: var(--red); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 8px; }
-
-        /* 요약 카드: 모바일 2열 배치 */
-        .summary-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-        @media (min-width: 600px) { .summary-cards { grid-template-columns: repeat(3, 1fr); } }
-        .s-card { background: white; padding: 12px 5px; border-radius: 10px; text-align: center; border: 1px solid #e2e8f0; border-top: 4px solid var(--primary); }
-        .s-card h5 { margin: 0; font-size: 11px; color: #64748b; }
-        .s-card p { margin: 5px 0 0; font-size: 15px; font-weight: 800; color: var(--primary); }
-
-        /* 차트 영역 크기 조정 */
-        .chart-box { background: white; padding: 10px; border-radius: 12px; border: 1px solid #e2e8f0; height: 300px; margin-top: 10px; }
-        
-        /* [핵심] 테이블 모바일 가로 스크롤 */
-        .table-box { background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; margin-top: 10px; }
-        .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        table { width: 100%; border-collapse: collapse; min-width: 600px; /* 모바일에서 표가 찌그러지지 않게 최소 너비 설정 */ }
-        th { padding: 12px 8px; background: #f8fafc; font-size: 11px; border-bottom: 2px solid #e2e8f0; text-align: right; }
-        td { padding: 10px 8px; font-size: 12px; border-bottom: 1px solid #f1f5f9; text-align: right; }
-        th:first-child, td:first-child { text-align: center; position: sticky; left: 0; background: #f8fafc; }
-
-        /* PDF 출력 시 강제 레이아웃 */
-        .pdf-mode { width: 1100px !important; padding: 20px !important; }
-        .pdf-mode .table-scroll { overflow: visible !important; }
+        .summary-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 15px; }
+        .s-card { background: white; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0; border-top: 5px solid var(--primary); }
+        .s-card p { margin: 5px 0 0; font-size: 18px; font-weight: 800; color: var(--primary); }
+        .chart-box { background: white; padding: 15px; border-radius: 16px; border: 1px solid #e2e8f0; height: 400px; margin-bottom: 15px; }
+        .table-box { background: white; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; }
+        .table-scroll { max-height: 500px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        thead { background: #f8fafc; position: sticky; top: 0; }
+        th, td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; text-align: right; }
+        .txt-profit { font-weight: bold; color: var(--success); }
+        .pdf-mode { width: 1100px !important; padding: 20px !important; background: white !important; }
+        .pdf-mode .table-scroll { max-height: none !important; overflow: visible !important; }
     </style>
 </head>
 <body>
-
 <div class="wrapper" id="main-content">
     <div class="model-tabs">
-        <div class="tab active" id="t1" onclick="changeMode(1)">전기절감+판매</div>
-        <div class="tab" id="t2" onclick="changeMode(2)">전량 판매</div>
-        <div class="tab" id="t3" onclick="changeMode(3)">지붕 임대</div>
+        <div class="tab active" id="t1" onclick="changeMode(1)"><h4>🏠 전기절감 + 판매</h4></div>
+        <div class="tab" id="t2" onclick="changeMode(2)"><h4>💰 전량 판매</h4></div>
+        <div class="tab" id="t3" onclick="changeMode(3)"><h4>🏢 지붕 임대</h4></div>
     </div>
-
     <div class="main-grid">
         <div class="side-panel">
-            <div class="section-title">기본 및 금융 설정</div>
+            <div class="section-title">기본 정보</div>
             <div class="input-group"><label>설치 용량 (kW)</label><input type="number" id="cap" value="100" oninput="autoFinanceAll()"></div>
-            
+            <div class="input-group" id="gen-ui"><label>일평균 발전시간 (h)</label><input type="number" id="genTime" value="3.6" step="0.1"></div>
+            <div class="input-group" id="deg-ui"><label>연 효율 저감율 (%)</label><input type="number" id="deg" value="1.0" step="0.1"></div>
             <div id="finance-ui">
-                <div class="input-group"><label>총 투자비 (만원)</label><input type="number" id="totalInvest" value="12000" oninput="distributeFinance()"></div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                    <div class="input-group"><label>자기자본 (20%)</label><input type="number" id="cash" value="2400"></div>
-                    <div class="input-group"><label>대출 금액 (80%)</label><input type="number" id="loan" value="9600"></div>
-                </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                    <div class="input-group"><label>금리 (%)</label><input type="number" id="rate" value="1.75" step="0.01"></div>
-                    <div class="input-group"><label>기간 (년)</label><input type="number" id="period" value="10"></div>
+                <div class="section-title">투자 및 금융 (만원)</div>
+                <div class="input-group"><label>총 투자비 (자동/수정가능)</label><input type="number" id="totalInvest" value="12000" oninput="distributeFinance()"></div>
+                <div class="input-group"><label>자기자본 (20%)</label><input type="number" id="cash" value="2400"></div>
+                <div class="input-group"><label>대출 금액 (80%)</label><input type="number" id="loan" value="9600"></div>
+                <div class="input-group"><label>금리 (%) / 기간 (년)</label>
+                    <div style="display:flex; gap:8px;"><input type="number" id="rate" value="1.75" step="0.01"><input type="number" id="period" value="10"></div>
                 </div>
             </div>
-
-            <div class="section-title">수익 상세 설정</div>
+            <div class="section-title">상세 수익 설정</div>
             <div id="dynamic-inputs"></div>
             <div class="input-group" id="om-ui"><label>연 운영비 (만원)</label><input type="number" id="om" value="150"></div>
-            <div id="extra-ui" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                <div class="input-group"><label>발전시간 (h)</label><input type="number" id="genTime" value="3.6" step="0.1"></div>
-                <div class="input-group"><label>효율저감 (%)</label><input type="number" id="deg" value="1.0" step="0.1"></div>
-            </div>
-
             <button class="btn-upd" onclick="calc()">수익 분석 업데이트</button>
-            <button class="btn-pdf" onclick="downloadPDF()">PDF 리포트 저장</button>
+            <button class="btn-pdf" onclick="downloadPDF()">PDF 결과 저장</button>
         </div>
-
         <div class="content-panel">
             <div class="summary-cards">
-                <div class="s-card"><h5>20년 총매출</h5><p id="sumRev">-</p></div>
-                <div class="s-card" id="exp-card"><h5>20년 총비용</h5><p id="sumExp">-</p></div>
-                <div class="s-card" style="border-top-color: var(--success); grid-column: span 2;"><h5>20년 예상 순이익</h5><p id="sumNet">-</p></div>
+                <div class="s-card"><h5>20년 누적 총매출</h5><p id="sumRev">-</p></div>
+                <div class="s-card" id="exp-card"><h5>20년 누적 총비용</h5><p id="sumExp">-</p></div>
+                <div class="s-card" style="border-top-color: var(--success);"><h5>20년 예상 순이익</h5><p id="sumNet">-</p></div>
             </div>
-            
             <div class="chart-box"><canvas id="mainChart"></canvas></div>
-            
-            <div class="table-box">
-                <div class="table-scroll">
-                    <table id="resTable">
-                        <thead><tr id="theadRow"></tr></thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
+            <div class="table-box"><div class="table-scroll"><table><thead><tr id="theadRow"></tr></thead><tbody id="tbody"></tbody></table></div></div>
         </div>
     </div>
 </div>
-
 <script>
-// 기존 자바스크립트 로직 (100% 동일 유지)
-let mode = 1;
-let myChart;
-
-function autoFinanceAll() {
-    if (mode === 3) return;
-    const cap = parseFloat(document.getElementById('cap').value) || 0;
-    document.getElementById('totalInvest').value = Math.round(cap * 120);
-    distributeFinance();
-}
-
-function distributeFinance() {
-    const total = parseFloat(document.getElementById('totalInvest').value) || 0;
-    document.getElementById('cash').value = Math.round(total * 0.2);
-    document.getElementById('loan').value = Math.round(total * 0.8);
-}
-
-function changeMode(m) {
-    mode = m;
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.getElementById('t'+m).classList.add('active');
-    const isRental = (mode === 3);
-    document.getElementById('finance-ui').style.display = isRental ? 'none' : 'block';
-    document.getElementById('om-ui').style.display = isRental ? 'none' : 'block';
-    document.getElementById('extra-ui').style.display = isRental ? 'none' : 'grid';
-    document.getElementById('exp-card').style.display = isRental ? 'none' : 'block';
-    renderInputs();
-    calc();
-}
-
-function renderInputs() {
-    const div = document.getElementById('dynamic-inputs');
-    const weightHtml = `<div class="input-group"><label>가중치 선택 (건물/일반/임야)</label>
-                        <select id="weight"><option value="1.5">건물/옥상(1.5)</option><option value="1.2">일반부지(1.2)</option><option value="1.0">임야(1.0)</option></select></div>`;
-    if (mode === 1) {
-        div.innerHTML = weightHtml + `<div class="input-group"><label>절감단가/자가비율(%)</label><div style="display:flex; gap:5px;"><input type="number" id="savePrice" value="200"><input type="number" id="selfRatio" value="30"></div></div>
-                         <div class="input-group"><label>SMP / REC 단가</label><div style="display:flex; gap:8px;"><input type="number" id="smp" value="120"><input type="number" id="rec" value="75"></div></div>`;
-    } else if (mode === 2) {
-        div.innerHTML = weightHtml + `<div class="input-group"><label>SMP / REC 단가</label><div style="display:flex; gap:8px;"><input type="number" id="smp" value="120"><input type="number" id="rec" value="75"></div></div>`;
-    } else {
-        div.innerHTML = `<div class="input-group"><label>연 임대료 (원/kW)</label><input type="number" id="rentPrice" value="40000"></div>`;
-    }
-}
-
-function calc() {
-    const v = {
-        cap: parseFloat(document.getElementById('cap').value) || 0,
-        gen: parseFloat(document.getElementById('genTime').value) || 0,
-        deg: (parseFloat(document.getElementById('deg').value) || 0) / 100,
-        loan: (parseFloat(document.getElementById('loan').value) || 0) * 10000,
-        rate: (parseFloat(document.getElementById('rate').value) || 0) / 100 / 12,
-        period: (parseInt(document.getElementById('period').value) || 0) * 12,
-        om: (mode === 3) ? 0 : (parseFloat(document.getElementById('om').value) || 0)
-    };
-
-    const monRepay = (v.loan > 0 && v.rate > 0) ? (v.loan * v.rate * Math.pow(1 + v.rate, v.period)) / (Math.pow(1 + v.rate, v.period) - 1) : 0;
-    const yearRepay = (monRepay * 12) / 10000;
-
-    let labels = [], dataSell = [], dataCum = [];
-    let tTotalRev = 0, tExp = 0, tNet = 0;
-    
-    const thead = document.getElementById('theadRow');
-    const tbody = document.querySelector('#resTable tbody');
-    tbody.innerHTML = '';
-
-    if (mode === 3) {
-        thead.innerHTML = `<th>차수</th><th>용량(kW)</th><th>단가(원)</th><th>수익(만)</th><th>누적(만)</th>`;
-    } else {
-        thead.innerHTML = `<th>차수</th><th>발전량</th><th>매출</th><th>상환</th><th>관리비</th><th>순익</th><th>누적</th>`;
-    }
-
-    for (let i = 1; i <= 20; i++) {
-        labels.push(i + '년');
-        let annualGen = v.cap * v.gen * 365 * Math.pow(1 - v.deg, i - 1);
-        let sRev = 0, pRev = 0, total = 0, repay = 0;
-
-        if (mode === 1 || mode === 2) {
-            const w = parseFloat(document.getElementById('weight').value);
-            const sellUnitPrice = parseFloat(document.getElementById('smp').value) + (parseFloat(document.getElementById('rec').value) * w);
-            if (mode === 1) {
-                const ratio = (parseFloat(document.getElementById('selfRatio').value) || 0) / 100;
-                sRev = (annualGen * ratio * parseFloat(document.getElementById('savePrice').value)) / 10000;
-                pRev = (annualGen * (1 - ratio) * sellUnitPrice) / 10000;
-            } else { pRev = (annualGen * sellUnitPrice) / 10000; }
-            total = sRev + pRev;
-            repay = (i <= (v.period / 12)) ? yearRepay : 0;
-        } else {
-            total = (v.cap * (parseFloat(document.getElementById('rentPrice').value) || 40000)) / 10000;
-            repay = 0;
-        }
-
-        const net = total - repay - v.om;
-        tTotalRev += total; tExp += (repay + v.om); tNet += net;
-        dataSell.push(Math.round(total)); dataCum.push(Math.round(tNet));
-
-        let row = `<tr><td>${i}</td>`;
-        if (mode === 3) {
-            row += `<td>${v.cap}</td><td>${(document.getElementById('rentPrice').value || 40000).toLocaleString()}</td><td>${Math.round(total).toLocaleString()}</td><td class="txt-profit">${Math.round(tNet).toLocaleString()}</td></tr>`;
-        } else {
-            row += `<td>${Math.round(annualGen).toLocaleString()}</td><td>${Math.round(total).toLocaleString()}</td><td>${Math.round(repay).toLocaleString()}</td><td>${v.om}</td><td class="txt-profit">${Math.round(net).toLocaleString()}</td><td>${Math.round(tNet).toLocaleString()}</td></tr>`;
-        }
-        tbody.insertAdjacentHTML('beforeend', row);
-    }
-
-    document.getElementById('sumRev').innerText = Math.round(tTotalRev).toLocaleString() + "만";
-    if(document.getElementById('sumExp')) document.getElementById('sumExp').innerText = Math.round(tExp).toLocaleString() + "만";
-    document.getElementById('sumNet').innerText = Math.round(tNet).toLocaleString() + "만";
-
-    drawChart(labels, dataSell, dataCum);
-}
-
-function drawChart(l, ds, dc) {
-    const ctx = document.getElementById('mainChart').getContext('2d');
-    if (myChart) myChart.destroy();
-    myChart = new Chart(ctx, {
-        data: {
-            labels: l,
-            datasets: [
-                { label: '누적 순익(만)', data: dc, type: 'line', borderColor: '#1a365d', backgroundColor: 'rgba(26,54,93,0.1)', fill: true, yAxisID: 'y1' },
-                { label: '연 매출(만)', data: ds, type: 'bar', backgroundColor: '#38a169', yAxisID: 'y' }
-            ]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true, position: 'left' }, y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } } },
-            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } }
-        }
-    });
-}
-
-function downloadPDF() {
-    const element = document.getElementById('main-content');
-    element.classList.add('pdf-mode');
-    const opt = {
-        margin: [10, 10],
-        filename: 'VGEN_태양광_수익분석.pdf',
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a3', orientation: 'landscape' }
-    };
-    html2pdf().set(opt).from(element).save().then(() => { element.classList.remove('pdf-mode'); });
-}
+let mode = 1; let myChart;
+function autoFinanceAll() { if (mode === 3) return; const cap = parseFloat(document.getElementById('cap').value) || 0; document.getElementById('totalInvest').value = Math.round(cap * 120); distributeFinance(); }
+function distributeFinance() { const total = parseFloat(document.getElementById('totalInvest').value) || 0; document.getElementById('cash').value = Math.round(total * 0.2); document.getElementById('loan').value = Math.round(total * 0.8); }
+function changeMode(m) { mode = m; document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); document.getElementById('t'+m).classList.add('active'); const isRental = (mode === 3); document.getElementById('finance-ui').style.display = isRental ? 'none' : 'block'; document.getElementById('om-ui').style.display = isRental ? 'none' : 'block'; document.getElementById('gen-ui').style.display = isRental ? 'none' : 'block'; document.getElementById('deg-ui').style.display = isRental ? 'none' : 'block'; document.getElementById('exp-card').style.visibility = isRental ? 'hidden' : 'visible'; renderInputs(); calc(); }
+function renderInputs() { const div = document.getElementById('dynamic-inputs'); const weightHtml = `<div class="input-group"><label>가중치 구분 (3가지)</label><select id="weight"><option value="1.5">건물/옥상(1.5)</option><option value="1.2">일반부지(1.2)</option><option value="1.0">임야(1.0)</option></select></div>`; if (mode === 1) { div.innerHTML = weightHtml + `<div class="input-group"><label>절감 단가 (원/kWh)</label><input type="number" id="savePrice" value="200"></div><div class="input-group"><label>SMP / REC 단가</label><div style="display:flex; gap:8px;"><input type="number" id="smp" value="120"><input type="number" id="rec" value="75"></div></div><div class="input-group"><label>자가소비 비율 (%)</label><input type="number" id="selfRatio" value="30"></div>`; } else if (mode === 2) { div.innerHTML = weightHtml + `<div class="input-group"><label>SMP / REC 단가</label><div style="display:flex; gap:8px;"><input type="number" id="smp" value="120"><input type="number" id="rec" value="75"></div></div>`; } else { div.innerHTML = `<div class="input-group"><label>연 임대료 (원/kW)</label><input type="number" id="rentPrice" value="40000"></div>`; } }
+function calc() { const v = { cap: parseFloat(document.getElementById('cap').value) || 0, gen: parseFloat(document.getElementById('genTime').value) || 0, deg: (parseFloat(document.getElementById('deg').value) || 0) / 100, loan: (parseFloat(document.getElementById('loan').value) || 0) * 10000, rate: (parseFloat(document.getElementById('rate').value) || 0) / 100 / 12, period: (parseInt(document.getElementById('period').value) || 0) * 12, om: (mode === 3) ? 0 : (parseFloat(document.getElementById('om').value) || 0) }; const monRepay = (v.loan > 0 && v.rate > 0) ? (v.loan * v.rate * Math.pow(1 + v.rate, v.period)) / (Math.pow(1 + v.rate, v.period) - 1) : 0; const yearRepay = (monRepay * 12) / 10000; let labels = [], dataSell = [], dataCum = []; let tTotalRev = 0, tExp = 0, tNet = 0; const thead = document.getElementById('theadRow'); const tbody = document.getElementById('tbody'); tbody.innerHTML = ''; if (mode === 3) { thead.innerHTML = `<th>차수</th><th>용량(kW)</th><th>단가(원)</th><th>연수익</th><th>누적수익</th>`; } else { let h = `<th>차수</th><th>발전량(kWh)</th>`; if (mode === 1) h += `<th>절감액</th><th>판매액</th>`; h += `<th>매출합계</th><th>대출상환</th><th>관리비</th><th>순수익</th><th>누적순익</th>`; thead.innerHTML = h; } for (let i = 1; i <= 20; i++) { labels.push(i + '년'); let annualGen = v.cap * v.gen * 365 * Math.pow(1 - v.deg, i - 1); let sRev = 0, pRev = 0, total = 0, repay = 0; if (mode === 1 || mode === 2) { const w = parseFloat(document.getElementById('weight').value); const unitSell = parseFloat(document.getElementById('smp').value) + (parseFloat(document.getElementById('rec').value) * w); if (mode === 1) { const ratio = (parseFloat(document.getElementById('selfRatio').value) || 0) / 100; sRev = (annualGen * ratio * parseFloat(document.getElementById('savePrice').value)) / 10000; pRev = (annualGen * (1 - ratio) * unitSell) / 10000; } else { pRev = (annualGen * unitSell) / 10000; } total = sRev + pRev; repay = (i <= (v.period / 12)) ? yearRepay : 0; } else { total = (v.cap * (parseFloat(document.getElementById('rentPrice').value) || 40000)) / 10000; repay = 0; } const net = total - repay - v.om; tTotalRev += total; tExp += (repay + v.om); tNet += net; dataSell.push(Math.round(total)); dataCum.push(Math.round(tNet)); if (mode === 3) { tbody.insertAdjacentHTML('beforeend', `<tr><td>${i}</td><td>${v.cap}</td><td>${(document.getElementById('rentPrice').value || 40000).toLocaleString()}</td><td>${Math.round(total).toLocaleString()}</td><td class="txt-profit">${Math.round(tNet).toLocaleString()}</td></tr>`); } else { let r = `<tr><td>${i}</td><td>${Math.round(annualGen).toLocaleString()}</td>`; if (mode === 1) r += `<td>${Math.round(sRev).toLocaleString()}</td><td>${Math.round(pRev).toLocaleString()}</td>`; r += `<td>${Math.round(total).toLocaleString()}</td><td>${Math.round(repay).toLocaleString()}</td><td>${v.om}</td><td class="txt-profit">${Math.round(net).toLocaleString()}</td><td>${Math.round(tNet).toLocaleString()}</td></tr>`; tbody.insertAdjacentHTML('beforeend', r); } } document.getElementById('sumRev').innerText = Math.round(tTotalRev).toLocaleString() + "만"; document.getElementById('sumExp').innerText = Math.round(tExp).toLocaleString() + "만"; document.getElementById('sumNet').innerText = Math.round(tNet).toLocaleString() + "만"; drawChart(labels, dataSell, dataCum); }
+function drawChart(l, ds, dc) { const ctx = document.getElementById('mainChart').getContext('2d'); if (myChart) myChart.destroy(); myChart = new Chart(ctx, { data: { labels: l, datasets: [{ label: '누적 순익', data: dc, type: 'line', borderColor: '#1a365d', fill: true }, { label: '연 매출', data: ds, type: 'bar', backgroundColor: '#38a169' }] }, options: { responsive: true, maintainAspectRatio: false } }); }
+function downloadPDF() { const element = document.getElementById('main-content'); element.classList.add('pdf-mode'); html2pdf().set({ margin: 10, filename: '태양광_수익분석.pdf', jsPDF: { format: 'a3', orientation: 'landscape' } }).from(element).save().then(() => { element.classList.remove('pdf-mode'); }); }
 window.onload = () => { renderInputs(); calc(); };
 </script>
 </body>
